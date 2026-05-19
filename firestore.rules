@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitive Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // 2. Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.displayName is string;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['type', 'amount', 'category', 'date']) &&
+             data.type in ['income', 'expense'] &&
+             data.amount is number &&
+             data.category is string &&
+             data.date is string;
+    }
+
+    function isValidBudget(data) {
+      return data.keys().hasAll(['category', 'limit', 'month']) &&
+             data.limit is number &&
+             data.category is string &&
+             data.month is string;
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll(['name', 'targetAmount', 'currentAmount']) &&
+             data.targetAmount is number &&
+             data.currentAmount is number &&
+             data.name is string;
+    }
+
+    function isValidWallet(data) {
+      return data.keys().hasAll(['name', 'type', 'balance']) &&
+             data.balance is number &&
+             data.name is string;
+    }
+
+    function isValidSubscription(data) {
+      return data.keys().hasAll(['name', 'amount', 'billingCycle']) &&
+             data.amount is number &&
+             data.name is string &&
+             data.billingCycle in ['monthly', 'yearly'];
+    }
+
+    // 1. Master Gate
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /goals/{goalId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /wallets/{walletId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /subscriptions/{subscriptionId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}
