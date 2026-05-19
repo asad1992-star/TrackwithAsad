@@ -13,10 +13,11 @@ import { Wallets } from './pages/Wallets';
 import { Calendar } from './pages/Calendar';
 import { Settings } from './pages/Settings';
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+class ErrorBoundary extends React.Component<any, any> {
+  public state = { hasError: false };
+
   constructor(props: any) {
     super(props);
-    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError() {
@@ -42,7 +43,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         </div>
       );
     }
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 

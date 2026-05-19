@@ -51,11 +51,11 @@ export const Subscriptions = () => {
           <p className="text-gray-400">Manage your recurring services and bills</p>
         </div>
         <button 
-          onClick={() => setShowAddForm(true)}
+          onClick={() => setShowAddForm(prev => !prev)}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2"
         >
-          <Plus size={18} />
-          <span>Add Subscription</span>
+          {showAddForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showAddForm ? 'Close' : 'Add Subscription'}</span>
         </button>
       </div>
 
@@ -81,7 +81,7 @@ export const Subscriptions = () => {
                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white">
                   <CreditCard size={20} />
                </div>
-               <button onClick={() => deleteSub(sub.id)} className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+               <button onClick={() => deleteSub(sub.id)} className="text-gray-600 hover:text-red-500 transition-all">
                   <Trash2 size={16} />
                </button>
             </div>

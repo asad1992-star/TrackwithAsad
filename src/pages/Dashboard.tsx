@@ -8,6 +8,7 @@ import {
   ArrowDownLeft, 
   Wallet, 
   TrendingUp,
+  Trash2,
   Sparkles
 } from 'lucide-react';
 import { 
@@ -58,6 +59,14 @@ export const Dashboard = () => {
   const currency = profile?.currency || 'Rs';
 
   // Calculate stats
+  const totalIncome = transactions
+    .filter((tx: any) => tx.type === 'income')
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+  
+  const totalExpenses = transactions
+    .filter((tx: any) => tx.type === 'expense')
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+
   const currentMonth = format(new Date(), 'yyyy-MM');
   const monthlyIncome = transactions
     .filter((tx: any) => tx.type === 'income' && tx.date.startsWith(currentMonth))
@@ -67,7 +76,9 @@ export const Dashboard = () => {
     .filter((tx: any) => tx.type === 'expense' && tx.date.startsWith(currentMonth))
     .reduce((acc: number, tx: any) => acc + tx.amount, 0);
 
-  const totalBalance = wallets.reduce((acc: number, w: any) => acc + w.balance, 0);
+  // Real-time balance = (sum of initial wallets) + total income - total expenses
+  const initialWalletsBalance = wallets.reduce((acc: number, w: any) => acc + w.balance, 0);
+  const totalBalance = initialWalletsBalance + totalIncome - totalExpenses;
   const totalSavings = goals.reduce((acc: number, g: any) => acc + g.currentAmount, 0);
 
   // Chart Data
@@ -242,6 +253,76 @@ export const Dashboard = () => {
                 ))}
              </div>
           </div>
+        </div>
+      </div>
+      {/* Recent Transactions Table */}
+      <div className="bg-[#141414] border border-[#1F1F1F] rounded-3xl overflow-hidden">
+        <div className="p-6 border-b border-[#1F1F1F] flex justify-between items-center">
+           <h3 className="text-lg font-bold">Recent Transactions</h3>
+           <button 
+             onClick={() => navigate('/expenses')}
+             className="text-xs font-bold text-orange-500 uppercase tracking-widest hover:text-orange-400 transition-colors"
+           >
+             View All
+           </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-gray-500 text-[10px] uppercase tracking-widest border-b border-[#1F1F1F]">
+                <th className="px-6 py-4 font-bold">Date</th>
+                <th className="px-6 py-4 font-bold">Type</th>
+                <th className="px-6 py-4 font-bold">Category</th>
+                <th className="px-6 py-4 font-bold text-right">Amount</th>
+                <th className="px-6 py-4 font-bold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1F1F1F]">
+              {transactions.slice(0, 5).map((tx: any) => (
+                <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="px-6 py-4 text-sm text-gray-400">
+                    {format(new Date(tx.date), 'MMM dd')}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${tx.type === 'income' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {tx.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-white">
+                    {tx.category}
+                  </td>
+                  <td className={`px-6 py-4 text-sm font-bold text-right ${tx.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                    {tx.type === 'income' ? '+' : '-'}{currency}{tx.amount.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end space-x-2">
+                    <button 
+                      onClick={() => navigate(`/${tx.type === 'income' ? 'income' : 'expenses'}`)}
+                      className="p-2 text-gray-500 hover:text-orange-500 transition-all"
+                    >
+                      <ArrowUpRight size={14} className="rotate-45" />
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if (confirm('Delete this transaction?')) {
+                          const { deleteDoc, doc } = await import('firebase/firestore');
+                          const { db } = await import('../lib/firebase');
+                          await deleteDoc(doc(db, `users/${profile.uid}/transactions`, tx.id));
+                        }
+                      }}
+                      className="p-2 text-gray-600 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {transactions.length === 0 && (
+            <div className="py-20 text-center text-gray-500 text-sm">
+               No recent transactions found.
+            </div>
+          )}
         </div>
       </div>
     </div>

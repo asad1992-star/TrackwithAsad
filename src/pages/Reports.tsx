@@ -340,7 +340,7 @@ export const Reports = () => {
              <h3 className="font-bold text-gray-300 uppercase tracking-widest text-xs">Categories</h3>
           </div>
           <div className="p-6 space-y-4 flex-1 overflow-auto max-h-[300px]">
-             {chartData.sort((a, b) => b.value - a.value).map((cat: any, idx) => (
+             {[...chartData].sort((a: any, b: any) => b.value - a.value).map((cat: any, idx) => (
                <div key={cat.name} className="flex justify-between items-center group">
                   <div className="flex items-center space-x-3">
                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />

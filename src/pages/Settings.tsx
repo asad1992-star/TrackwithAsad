@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useAuth } from '../components/AuthProvider';
 import { db, auth } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { motion } from 'motion/react';
-import { User, Shield, Bell, Globe, LogOut, Camera } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Bell, Globe, Camera } from 'lucide-react';
 
 export const Settings = () => {
   const { profile, user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('Profile');
 
-  const updateProfile = async (field: string, value: string) => {
+  const updateProfile = async (field: string, value: any) => {
     if (!profile) return;
     setSaving(true);
     try {
@@ -24,7 +25,7 @@ export const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div>
         <h2 className="text-2xl font-bold text-white">Settings</h2>
         <p className="text-gray-400">Manage your profile and preferences</p>
@@ -44,17 +45,19 @@ export const Settings = () => {
                   </div>
                </div>
                <h3 className="font-bold text-white">{profile?.displayName}</h3>
-               <p className="text-sm text-gray-500">{profile?.email}</p>
+               <p className="text-sm text-gray-500 italic opacity-50">Local ID: {profile?.uid.slice(0, 8)}...</p>
             </div>
 
             <nav className="bg-[#141414] border border-[#1F1F1F] rounded-2xl overflow-hidden p-2">
                {[
-                 { icon: User, label: 'Profile', active: true },
+                 { icon: User, label: 'Profile' },
                  { icon: Globe, label: 'Preferences' },
-                 { icon: Bell, label: 'Notifications' },
-                 { icon: Shield, label: 'Security' },
                ].map((item) => (
-                 <button key={item.label} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${item.active ? 'bg-orange-500/10 text-orange-500' : 'text-gray-400 hover:bg-white/5'}`}>
+                 <button 
+                  key={item.label} 
+                  onClick={() => setActiveTab(item.label)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.label ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-400 hover:bg-white/5'}`}
+                 >
                    <item.icon size={18} />
                    <span className="text-sm font-medium">{item.label}</span>
                  </button>
@@ -63,47 +66,57 @@ export const Settings = () => {
          </div>
 
          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-[#141414] border border-[#1F1F1F] p-8 rounded-2xl">
-               <h3 className="font-bold mb-6 text-gray-400 uppercase tracking-widest text-xs">General Preferences</h3>
-               <div className="space-y-6">
-                  <div>
-                     <label className="text-sm font-medium text-gray-400 block mb-2">Preferred Currency</label>
-                     <select 
-                       value={profile?.currency || 'Rs'}
-                       onChange={(e) => updateProfile('currency', e.target.value)}
-                       disabled={saving}
-                       className="w-full bg-[#1F1F1F] border border-[#2F2F2F] rounded-xl px-4 py-3 text-sm focus:border-orange-500 outline-none transition-colors"
-                     >
-                        <option value="Rs">PKR (Rs)</option>
-                        <option value="$">USD ($)</option>
-                        <option value="€">EUR (€)</option>
-                        <option value="£">GBP (£)</option>
-                        <option value="₹">INR (₹)</option>
-                     </select>
+            <AnimatePresence mode="wait">
+              {activeTab === 'Profile' && (
+                <motion.div 
+                  key="profile"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="bg-[#141414] border border-[#1F1F1F] p-8 rounded-2xl">
+                    <h3 className="font-bold mb-6 text-gray-400 uppercase tracking-widest text-xs">Profile Information</h3>
+                    <div className="space-y-6">
+                        <div>
+                          <label className="text-sm font-medium text-gray-400 block mb-2">Display Name</label>
+                          <input 
+                            defaultValue={profile?.displayName}
+                            onBlur={(e) => updateProfile('displayName', e.target.value)}
+                            className="w-full bg-[#1F1F1F] border border-[#2F2F2F] rounded-xl px-4 py-3 text-sm focus:border-orange-500 outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-400 block mb-2">Currency Symbol</label>
+                          <input 
+                            defaultValue={profile?.currency}
+                            onBlur={(e) => updateProfile('currency', e.target.value)}
+                            placeholder="Rs, $, €"
+                            className="w-full bg-[#1F1F1F] border border-[#2F2F2F] rounded-xl px-4 py-3 text-sm focus:border-orange-500 outline-none transition-colors"
+                          />
+                        </div>
+                    </div>
                   </div>
-                  <div>
-                     <label className="text-sm font-medium text-gray-400 block mb-2">Display Name</label>
-                     <input 
-                       defaultValue={profile?.displayName}
-                       onBlur={(e) => updateProfile('displayName', e.target.value)}
-                       className="w-full bg-[#1F1F1F] border border-[#2F2F2F] rounded-xl px-4 py-3 text-sm focus:border-orange-500 outline-none transition-colors"
-                     />
-                  </div>
-               </div>
-            </div>
+                </motion.div>
+              )}
 
-            <div className="bg-[#141414] border border-[#1F1F1F] p-8 rounded-2xl flex justify-between items-center">
-               <div>
-                  <h4 className="font-bold text-white">Sign Out</h4>
-                  <p className="text-sm text-gray-500">Log out of your account on this device</p>
-               </div>
-               <button 
-                 onClick={() => auth.signOut()}
-                 className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white px-6 py-2 rounded-xl text-sm font-bold transition-all"
-               >
-                 Sign Out
-               </button>
-            </div>
+              {activeTab === 'Preferences' && (
+                <motion.div 
+                  key="preferences"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="bg-[#141414] border border-[#1F1F1F] p-8 rounded-2xl">
+                    <h3 className="font-bold mb-6 text-gray-400 uppercase tracking-widest text-xs">App Preferences</h3>
+                    <div className="space-y-4">
+                       <p className="text-gray-500 text-sm italic">Additional preferences coming soon...</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
          </div>
       </div>
     </div>

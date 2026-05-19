@@ -52,11 +52,11 @@ export const Budgets = () => {
           <p className="text-gray-400">Set and track monthly limits by category</p>
         </div>
         <button 
-          onClick={() => setShowAddForm(true)}
+          onClick={() => setShowAddForm(prev => !prev)}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2"
         >
-          <Plus size={18} />
-          <span>New Budget</span>
+          {showAddForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showAddForm ? 'Close' : 'New Budget'}</span>
         </button>
       </div>
 
@@ -103,7 +103,7 @@ export const Budgets = () => {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${percent}%` }}
-                    className={`h-full ${percent > 90 ? 'bg-red-500' : percent > 70 ? 'bg-yellow-500' : 'bg-orange-500'}`}
+                    className={`h-full ${percent > 90 ? 'bg-red-500' : percent >= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
                   />
                 </div>
                 <div className="flex justify-between items-end pt-2">

@@ -90,7 +90,7 @@ export const Goals = () => {
                  </div>
                  <button 
                     onClick={() => deleteGoal(goal.id)}
-                    className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    className="text-gray-600 hover:text-red-500 transition-colors"
                   >
                   <Trash2 size={16} />
                 </button>

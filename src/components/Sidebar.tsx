@@ -7,13 +7,12 @@ import {
   PieChart, 
   Target, 
   Settings, 
-  LogOut,
   Wallet,
   Calendar,
   CreditCard,
   FileText
 } from 'lucide-react';
-import { auth } from '../lib/firebase';
+import { useAuth } from './AuthProvider';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -34,6 +33,8 @@ const navItems = [
 ];
 
 export const Sidebar = () => {
+  const { profile } = useAuth();
+  
   return (
     <div className="w-64 h-screen bg-[#0A0A0A] border-r border-[#1F1F1F] flex flex-col fixed left-0 top-0 z-50">
       <div className="p-6">
@@ -69,13 +70,6 @@ export const Sidebar = () => {
           <Settings size={20} />
           <span className="text-sm">Settings</span>
         </NavLink>
-        <button 
-          onClick={() => auth.signOut()}
-          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-gray-400 hover:text-red-500 hover:bg-red-500/5 group"
-        >
-          <LogOut size={20} className="group-hover:text-red-500" />
-          <span className="text-sm">Log Out</span>
-        </button>
       </div>
     </div>
   );

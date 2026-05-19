@@ -2,20 +2,19 @@ import React, { useState } from 'react';
 import { useFinanceData } from '../hooks/useFinanceData';
 import { useAuth } from '../components/AuthProvider';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, Search, Filter, X } from 'lucide-react';
+import { Plus, Trash2, Search, Filter, X, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 const schema = z.object({
-  amount: z.number().min(1, "Amount is required"),
+  amount: z.number().min(0, "Amount is required"),
   category: z.string().min(1, "Category is required"),
   date: z.string().min(1, "Date is required"),
   notes: z.string().optional(),
-  walletId: z.string().optional(),
 });
 
 const categories = {
@@ -25,11 +24,16 @@ const categories = {
 
 export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
   const { profile } = useAuth();
-  const { transactions, wallets } = useFinanceData();
+  const { transactions } = useFinanceData();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTx, setEditingTx] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       amount: 0,
@@ -41,21 +45,50 @@ export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
 
   const filteredTx = transactions
     .filter((tx: any) => tx.type === type)
-    .filter((tx: any) => 
-      tx.category.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      tx.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    .filter((tx: any) => {
+      const matchesSearch = tx.category.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        tx.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = selectedCategory === '' || tx.category === selectedCategory;
+      
+      const txDate = new Date(tx.date);
+      const matchesStartDate = startDate === '' || txDate >= new Date(startDate);
+      const matchesEndDate = endDate === '' || txDate <= new Date(endDate);
+      
+      return matchesSearch && matchesCategory && matchesStartDate && matchesEndDate;
+    });
+
+  const startEdit = (tx: any) => {
+    setEditingTx(tx);
+    setValue('amount', tx.amount);
+    setValue('category', tx.category);
+    setValue('date', tx.date);
+    setValue('notes', tx.notes || '');
+    setShowAddForm(true);
+  };
+
+  const closeForm = () => {
+    setShowAddForm(false);
+    setEditingTx(null);
+    reset();
+  };
 
   const onSubmit = async (data: any) => {
     if (!profile) return;
     try {
-      await addDoc(collection(db, `users/${profile.uid}/transactions`), {
-        ...data,
-        type,
-        createdAt: serverTimestamp(),
-      });
-      reset();
-      setShowAddForm(false);
+      if (editingTx) {
+        await updateDoc(doc(db, `users/${profile.uid}/transactions`, editingTx.id), {
+          ...data,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(db, `users/${profile.uid}/transactions`), {
+          ...data,
+          type,
+          createdAt: serverTimestamp(),
+        });
+      }
+      closeForm();
     } catch (err) {
       console.error(err);
     }
@@ -76,34 +109,91 @@ export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white capitalize">{type}s</h2>
-          <p className="text-gray-400">Manage your {type} history</p>
+          <p className="text-gray-400">Total {type} management</p>
         </div>
         <button 
-          onClick={() => setShowAddForm(true)}
+          onClick={() => showAddForm ? closeForm() : setShowAddForm(true)}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2"
         >
-          <Plus size={18} />
-          <span>Add {type}</span>
+          {showAddForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showAddForm ? 'Close' : `Add ${type}`}</span>
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex space-x-4">
-        <div className="flex-1 relative">
+      {/* Filters bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
+        <div className="flex-1 relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
           <input 
             type="text"
-            placeholder="Search category or notes..."
+            placeholder="Search notes..."
             className="w-full bg-[#141414] border border-[#1F1F1F] rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-orange-500 transition-colors"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="bg-[#141414] border border-[#1F1F1F] px-4 rounded-xl flex items-center space-x-2 text-gray-400 hover:text-white transition-colors">
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          className={`px-4 py-3 rounded-xl border flex items-center space-x-2 text-sm transition-colors whitespace-nowrap ${showFilters ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 'bg-[#141414] border-[#1F1F1F] text-gray-400 hover:text-white'}`}
+        >
           <Filter size={18} />
-          <span className="text-sm">Filter</span>
+          <span>Filters</span>
         </button>
       </div>
+
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-[#141414] border border-[#1F1F1F] rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Category</label>
+                <select 
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl px-4 py-2.5 text-xs text-white focus:border-orange-500 outline-none"
+                >
+                  <option value="">All Categories</option>
+                  {categories[type].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block">Start Date</label>
+                <input 
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl px-4 py-2 text-xs text-white focus:border-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase mb-2 block">End Date</label>
+                <input 
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-[#0A0A0A] border border-[#1F1F1F] rounded-xl px-4 py-2 text-xs text-white focus:border-orange-500 outline-none"
+                />
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedCategory('');
+                  setStartDate('');
+                  setEndDate('');
+                  setSearchTerm('');
+                }}
+                className="w-full bg-white/5 hover:bg-white/10 text-gray-400 py-2.5 rounded-xl text-xs transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Transaction List */}
       <div className="bg-[#141414] border border-[#1F1F1F] rounded-2xl overflow-hidden">
@@ -143,10 +233,16 @@ export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
                   }>
                     {type === 'income' ? '+' : '-'}{profile?.currency} {tx.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex justify-end space-x-2">
+                    <button 
+                      onClick={() => startEdit(tx)}
+                      className="text-gray-500 hover:text-orange-500 transition-colors p-1"
+                    >
+                      <Edit2 size={16} />
+                    </button>
                     <button 
                       onClick={() => deleteTx(tx.id)}
-                      className="text-gray-500 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      className="text-gray-500 hover:text-red-500 transition-colors p-1"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -174,13 +270,13 @@ export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
               className="bg-[#141414] border border-[#1F1F1F] rounded-2xl w-full max-w-md p-8 relative shadow-2xl"
             >
               <button 
-                onClick={() => setShowAddForm(false)}
+                onClick={closeForm}
                 className="absolute right-6 top-6 text-gray-500 hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
               
-              <h3 className="text-xl font-bold mb-6">Add {type}</h3>
+              <h3 className="text-xl font-bold mb-6">{editingTx ? 'Edit' : 'Add'} {type}</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
@@ -226,7 +322,7 @@ export const Transactions = ({ type }: { type: 'income' | 'expense' }) => {
                   type="submit"
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-colors mt-6"
                 >
-                  Save Transaction
+                  {editingTx ? 'Update' : 'Save'} Transaction
                 </button>
               </form>
             </motion.div>

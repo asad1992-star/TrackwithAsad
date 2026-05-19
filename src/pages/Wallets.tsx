@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 
 export const Wallets = () => {
   const { profile } = useAuth();
-  const { wallets } = useFinanceData();
+  const { wallets, transactions } = useFinanceData();
   const [showAddForm, setShowAddForm] = useState(false);
   const { register, handleSubmit, reset } = useForm();
 
@@ -48,7 +48,16 @@ export const Wallets = () => {
     }
   };
 
-  const totalBalance = wallets.reduce((acc: number, w: any) => acc + w.balance, 0);
+  const totalIncome = transactions
+    .filter((tx: any) => tx.type === 'income')
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+  
+  const totalExpenses = transactions
+    .filter((tx: any) => tx.type === 'expense')
+    .reduce((acc: number, tx: any) => acc + tx.amount, 0);
+
+  const walletBaseBalance = wallets.reduce((acc: number, w: any) => acc + w.balance, 0);
+  const totalBalance = walletBaseBalance + totalIncome - totalExpenses;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -58,11 +67,11 @@ export const Wallets = () => {
           <p className="text-gray-400">Manage your cash, bank, and mobile wallets</p>
         </div>
         <button 
-          onClick={() => setShowAddForm(true)}
+          onClick={() => setShowAddForm(prev => !prev)}
           className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center space-x-2"
         >
-          <Plus size={18} />
-          <span>New Account</span>
+          {showAddForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showAddForm ? 'Close' : 'New Account'}</span>
         </button>
       </div>
 

@@ -57,10 +57,10 @@ export const Layout = () => {
         <motion.button 
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={() => setShowQuickAdd(true)}
+          onClick={() => setShowQuickAdd(prev => !prev)}
           className="fixed bottom-8 right-8 w-14 h-14 bg-orange-500 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.4)] flex items-center justify-center text-white z-[60] hover:bg-orange-600 transition-colors"
         >
-          <Plus size={28} />
+          {showQuickAdd ? <X size={28} /> : <Plus size={28} />}
         </motion.button>
 
         {/* Quick Add Modal */}
